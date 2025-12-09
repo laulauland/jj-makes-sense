@@ -1,0 +1,99 @@
+# Sample jj (Jujutsu) configuration file
+# Edit and copy this to ~/.config/jj/config.toml
+"$schema" = "https://jj-vcs.github.io/jj/latest/config-schema.json"
+
+[ui]
+# Run this command when you type just `jj` with no args
+default-command = "overview"
+editor = "nvim"
+#pager = "delta"
+# Use difftastic for syntax-aware diffs
+diff-formatter = "difft"
+
+
+[revset-aliases]
+# Find the nearest bookmark in the ancestry of a revision
+"closest_bookmark(to)" = "heads(::to & bookmarks())"
+# Show history from fork point to current commit
+"fork_history(to, from)" = "fork_point(to | from)..@"
+# Prevent editing remote bookmarks (treat them as immutable)
+'immutable_heads()' = "builtin_immutable_heads() | remote_bookmarks()"
+
+# Configure difftastic as a merge/diff tool
+[merge-tools.difft]
+program = "difft"
+diff-args = [
+	"--display",
+	"side-by-side",
+	"--color",
+	"always",
+	"$left",
+	"$right",
+]
+
+[aliases]
+# Move the closest bookmark from parent to parent (useful after making new commits)
+tug = ["bookmark", "move", "--from", "closest_bookmark(@-)", "--to", "@-"]
+# Show diff stats + recent commits (used as default-command)
+overview = [
+	"util",
+	"exec",
+	"--",
+	"sh",
+	"-c",
+	"jj diff --stat && jj log --limit 3",
+]
+# Show last 15 commits across all branches
+l = ["log", "-r", "all()", "--color=always", "-n", "15"]
+# Git-like shortcuts
+pull = ["git", "fetch"]
+push = ["git", "push"]
+# Fetch from all remotes
+sync = ["git", "fetch", "--all-remotes"]
+# Short aliases for common commands
+c = ["commit"]
+ci = ["commit", "--interactive"]
+e = ["edit"]
+s = ["status"]
+# Show parent commits of current working copy
+parents = ["log", "-r", "parents(@)"]
+# Create a merge commit: jj merge <bookmark>
+merge = [
+	"util",
+	"exec",
+	"--",
+	"sh",
+	"-c",
+	"jj new @ \"$1\" -m \"Merge $1\"",
+	"",
+]
+# Initialize a colocated git+jj repo
+gi = ["git", "init"]
+
+
+[git]
+# Automatically create local bookmarks when fetching remote branches
+auto-local-bookmark = true
+# Include change ID in commit message header (useful for tooling)
+write-change-id-header = true
+# Sign commits when pushing
+sign-on-push = true
+# Allow pushing newly created bookmarks without explicit flag
+push-new-bookmarks = true
+# Clean up commits that become unreachable after operations
+abandon-unreachable-commits = true
+# Track the default branch (main/master) when cloning
+track-default-bookmark-on-clone = true
+
+
+[template-aliases]
+# Display timestamps as relative time ("2 hours ago")
+"format_timestamp(timestamp)" = "timestamp.ago()"
+# Use shortest unique prefix for change IDs
+'format_short_change_id(id)' = 'id.shortest()'
+
+# Conditional config: use work email for repos under ~/Code/work
+[[--scope]]
+--when.repositories = ["<work_repository_path>"]
+[--scope.user]
+email = "<work_email@example.com>"

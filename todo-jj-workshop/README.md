@@ -18,11 +18,10 @@ A hands-on workshop for Git users learning Jujutsu (jj).
 
 1. Install jj: https://martinvonz.github.io/jj/latest/install/
 2. Install Bun: https://bun.sh
-3. Clone this repo and init jj:
+3. Clone this repo
    ```bash
-   git clone <repo-url>
+   jj git clone https://github.com/laulauland/jj-makes-sense
    cd todo-jj-workshop
-   jj git init --colocate
    bun install
    ```
 
@@ -549,6 +548,178 @@ The fix commit disappears from your local stack (it's in main now). Your feature
 
 ---
 
+## Part 8: Mega Merge and Absorb
+
+So far we've worked on one feature stack. But what if you're developing multiple features in parallel and want to test them together?
+
+### Setup: A parallel feature branch
+
+First, let's create a separate feature branch for task priorities. This branch will exist *in parallel* to our due-dates stack.
+
+```bash
+# Start from main (after the bugfix)
+jj new fix/done-task-id -m "feat: add priority field to Task type"
+```
+
+Load the priority feature:
+
+```bash
+cp _steps/06-priority-feature/task.ts src/task.ts
+cp _steps/06-priority-feature/add.ts src/commands/add.ts
+cp _steps/06-priority-feature/list.ts src/commands/list.ts
+```
+
+Create a bookmark for this branch:
+
+```bash
+jj bookmark create feat/priority -r @
+```
+
+Check the graph:
+
+```bash
+jj log
+```
+
+You now have two independent feature branches:
+
+```
+◉  feat/due-dates  feat: display due dates in 'todo list'
+◉                  feat: add --due flag to 'todo add' command
+◉                  feat: add dueDate field to Task type
+│ @  feat/priority  feat: add priority field to Task type
+├─╯
+◉  fix/done-task-id  fix: done command should find task by ID
+◉  main
+```
+
+### The problem
+
+You want to test both features together. In Git, you'd have to:
+1. Merge one branch into the other (polluting history), or
+2. Create a temporary integration branch, or
+3. Cherry-pick commits around
+
+### Mega merge
+
+In jj, create a merge commit with multiple parents:
+
+```bash
+jj new feat/due-dates feat/priority -m "mega: testing both features"
+```
+
+Check the graph:
+
+```bash
+jj log
+```
+
+```
+@    mega: testing both features
+├─╮
+◉ │  feat/due-dates  feat: display due dates in 'todo list'
+◉ │                  feat: add --due flag to 'todo add' command
+◉ │                  feat: add dueDate field to Task type
+│ ◉  feat/priority  feat: add priority field to Task type
+├─╯
+◉  fix/done-task-id
+◉  main
+```
+
+Your working copy now has **both features combined**. Test them together:
+
+```bash
+rm -f data/todos.json
+bun run todo add "Important task" --due 2025-01-20 --priority high
+bun run todo list
+```
+
+You should see both the due date and priority displayed.
+
+### Resolving the merge
+
+The mega merge might have conflicts in files that both branches modified (like `task.ts`, `add.ts`, `list.ts`). If so, load the merged versions:
+
+```bash
+cp _steps/07-mega-merge/task.ts src/task.ts
+cp _steps/07-mega-merge/add.ts src/commands/add.ts
+cp _steps/07-mega-merge/list.ts src/commands/list.ts
+```
+
+Verify everything works:
+
+```bash
+bun run todo list
+```
+
+### Code review feedback
+
+Now imagine reviewers give feedback on both branches:
+
+**Due dates feedback:**
+- "Improve the dueDate comment in task.ts"
+- "Better error message for invalid date format in add.ts"
+- "Change due date display format in list.ts"
+
+**Priority feedback:**
+- "Improve the priority comment in task.ts"
+- "Better error message for invalid priority in add.ts"
+- "Change priority display format in list.ts"
+
+Instead of editing each commit individually, make all fixes at once:
+
+```bash
+cp _steps/08-absorb-fixes/task.ts src/task.ts
+cp _steps/08-absorb-fixes/add.ts src/commands/add.ts
+cp _steps/08-absorb-fixes/list.ts src/commands/list.ts
+jj diff
+```
+
+You'll see changes that span both branches.
+
+### Absorb routes fixes automatically
+
+```bash
+jj absorb
+```
+
+jj analyzes which commit last modified each changed line and routes each fix to the correct commit—across both branches.
+
+Check the result:
+
+```bash
+jj log
+jj diff -r feat/due-dates
+jj diff -r feat/priority
+```
+
+Each commit now includes its review fixes. The changes were routed to the right places automatically.
+
+### Ship the branches separately
+
+When you're done testing, abandon the mega merge:
+
+```bash
+jj abandon
+```
+
+The branches are still separate. Push them as independent PRs:
+
+```bash
+jj git push --all
+```
+
+### Why this matters
+
+- Test integration *before* merging to main
+- Develop feature B that depends on feature A before A merges
+- Apply review fixes across multiple branches with one command
+- No pollution of your actual commit history
+
+This workflow has no Git equivalent. It's one of jj's unique strengths.
+
+---
+
 ## Cheat Sheet
 
 | What | Command |
@@ -571,6 +742,7 @@ The fix commit disappears from your local stack (it's in main now). Your feature
 | Squash into parent | `jj squash` |
 | Abandon a commit | `jj abandon` |
 | Restore a file | `jj restore <path>` |
+| Absorb changes into stack | `jj absorb` |
 | **Safety net** | |
 | See operation history | `jj op log` |
 | Undo last operation | `jj op undo` |
@@ -580,6 +752,8 @@ The fix commit disappears from your local stack (it's in main now). Your feature
 | Move a bookmark | `jj bookmark set <name> -r <change>` |
 | Push to GitHub | `jj git push --all` |
 | Fetch from GitHub | `jj git fetch` |
+| **Advanced** | |
+| Mega merge (test features together) | `jj new feat-a feat-b feat-c` |
 
 ---
 
@@ -619,6 +793,48 @@ Found a bug while building a feature? Put the fix where it belongs in history, n
 
 ---
 
+## Git to jj Command Reference
+
+| Task | Git | jj |
+|------|-----|-----|
+| **Basics** | | |
+| Check status | `git status` | `jj st` |
+| View history | `git log --oneline --graph` | `jj log` |
+| See changes | `git diff` | `jj diff` |
+| See staged changes | `git diff --cached` | *(no staging area)* |
+| **Committing** | | |
+| Stage + commit | `git add . && git commit -m "msg"` | `jj describe -m "msg" && jj new` |
+| Amend last commit | `git commit --amend` | `jj describe -m "new msg"` |
+| Add to last commit | `git add . && git commit --amend --no-edit` | `jj squash` |
+| **Branches** | | |
+| Create branch | `git checkout -b name` | `jj bookmark create name` |
+| Switch branch | `git checkout name` | `jj edit name` |
+| List branches | `git branch` | `jj bookmark list` |
+| Delete branch | `git branch -d name` | `jj bookmark delete name` |
+| **History editing** | | |
+| Rebase onto main | `git rebase main` | `jj rebase -d main` |
+| Interactive rebase | `git rebase -i HEAD~3` | `jj squash`, `jj split`, `jj rebase` |
+| Edit old commit | `git rebase -i` (mark as edit) | `jj edit <change>` |
+| Split a commit | `git rebase -i` + `reset` + multiple commits | `jj split` |
+| Reorder commits | `git rebase -i` (reorder lines) | `jj rebase -r <change> --before <target>` |
+| **Stashing** | | |
+| Stash changes | `git stash` | `jj new` (just start new commit) |
+| Pop stash | `git stash pop` | `jj edit <previous>` |
+| **Undoing** | | |
+| Undo last commit | `git reset HEAD~1` | `jj undo` |
+| Discard changes | `git checkout -- file` | `jj restore file` |
+| View undo history | `git reflog` | `jj op log` |
+| Undo any operation | `git reset --hard <reflog-ref>` | `jj op undo` or `jj op restore <op>` |
+| **Remote** | | |
+| Fetch | `git fetch` | `jj git fetch` |
+| Push | `git push` | `jj git push` |
+| Push all branches | `git push --all` | `jj git push --all` |
+| **Advanced** | | |
+| Route fixes to commits | *(manual with rebase -i)* | `jj absorb` |
+| Test multiple features | *(merge or cherry-pick)* | `jj new feat-a feat-b` |
+
+---
+
 ## Next Steps
 
 - Read the official tutorial: https://martinvonz.github.io/jj/latest/tutorial/
@@ -626,6 +842,6 @@ Found a bug while building a feature? Put the fix where it belongs in history, n
 - Chris Krycho's jj-init: https://v5.chriskrycho.com/essays/jj-init/
 
 Advanced topics to explore:
-- Working on multiple branches simultaneously (mega-merge workflow)
-- `jj absorb` for auto-routing changes to the right commits
 - Workspaces for multiple working copies
+- Revsets for powerful commit selection
+- Custom templates for `jj log` output
