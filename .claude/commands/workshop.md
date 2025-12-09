@@ -257,36 +257,43 @@ Now feat/due-dates is based directly on main (which includes the fix)
 
 ## Part 8: Mega Merge and Absorb
 
-**The big idea:** Test multiple features together, route fixes automatically.
+**The big idea:** Stack work naturally, parallelize when needed, test features together, route fixes automatically.
 
-**Step 8.1** - Create a parallel priority feature (branching from main):
+**Step 8.1** - You're ambitious, keep building on top of due-dates:
 ```bash
-jj new main -m "feat: add priority field to Task type"
+jj new -m "feat: add priority field to Task type"
 cp _steps/06-priority-feature/task.ts src/task.ts
 cp _steps/06-priority-feature/add.ts src/commands/add.ts
 cp _steps/06-priority-feature/list.ts src/commands/list.ts
 jj bookmark create feat/priority -r @
 ```
 
-**Step 8.2** - See the two parallel branches (both off main now):
+**Step 8.2** - See priority stacked on due-dates:
 ```bash
 jj log
 ```
-feat/due-dates and feat/priority both branch from main
+Priority is on top of due-dates (a tall stack)
 
-**Step 8.3** - Create mega merge (both features combined):
+**Step 8.3** - Realize these should be independent PRs. Parallelize them:
+```bash
+jj parallelize feat/due-dates feat/priority
+jj log
+```
+Now they're siblings, both branching from main. One command did the rebase.
+
+**Step 8.4** - Create mega merge (both features combined):
 ```bash
 jj new feat/due-dates feat/priority -m "mega: testing both features"
 ```
 
-**Step 8.4** - Resolve the merge:
+**Step 8.5** - Resolve the merge:
 ```bash
 cp _steps/07-mega-merge/task.ts src/task.ts
 cp _steps/07-mega-merge/add.ts src/commands/add.ts
 cp _steps/07-mega-merge/list.ts src/commands/list.ts
 ```
 
-**Step 8.5** - Test both features together:
+**Step 8.6** - Test both features together:
 ```bash
 rm -f data/todos.json
 bun run todo add "Important" --due 2025-01-20 --priority high
@@ -294,7 +301,7 @@ bun run todo list
 ```
 Both due date and priority show.
 
-**Step 8.6** - Simulate review feedback (apply fixes):
+**Step 8.7** - Simulate review feedback (apply fixes):
 ```bash
 cp _steps/08-absorb-fixes/task.ts src/task.ts
 cp _steps/08-absorb-fixes/add.ts src/commands/add.ts
@@ -303,19 +310,19 @@ jj diff
 ```
 Changes span both branches
 
-**Step 8.7** - Absorb routes each fix to the right commit:
+**Step 8.8** - Absorb routes each fix to the right commit:
 ```bash
 jj absorb
 ```
 
-**Step 8.8** - Verify fixes were routed:
+**Step 8.9** - Verify fixes were routed:
 ```bash
 jj log
 jj diff -r feat/due-dates
 jj diff -r feat/priority
 ```
 
-**Step 8.9** - Abandon mega merge, ship separately:
+**Step 8.10** - Abandon mega merge, ship separately:
 ```bash
 jj abandon
 jj log
@@ -329,6 +336,7 @@ Congratulate them. Key takeaways:
 - Working copy = commit (no staging)
 - Plan with empty commits
 - Discovery order is not the same as logical order
+- Parallelize to turn a stack into siblings
 - Mega merge to test features together
 - Absorb to route fixes automatically
 - `jj op undo` is your safety net

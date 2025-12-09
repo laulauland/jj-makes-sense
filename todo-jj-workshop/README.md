@@ -593,15 +593,14 @@ Your feature stack is now based on main (which includes the fix).
 
 ## Part 8: Mega Merge and Absorb
 
-So far we've worked on one feature stack. But what if you're developing multiple features in parallel and want to test them together?
+So far we've worked on one feature stack. But what if you're an ambitious developer who keeps building?
 
-### Setup: A parallel feature branch
+### Stacking more work
 
-Let's create a separate feature branch for task priorities. This branch will exist *in parallel* to our due-dates stack, both branching from main.
+You decide to add task priorities. Since you're already on top of due-dates, you just keep going:
 
 ```bash
-# Start from main (which now includes the bugfix)
-jj new main -m "feat: add priority field to Task type"
+jj new -m "feat: add priority field to Task type"
 ```
 
 Load the priority feature:
@@ -612,7 +611,7 @@ cp _steps/06-priority-feature/add.ts src/commands/add.ts
 cp _steps/06-priority-feature/list.ts src/commands/list.ts
 ```
 
-Create a bookmark for this branch:
+Create a bookmark:
 
 ```bash
 jj bookmark create feat/priority -r @
@@ -624,7 +623,31 @@ Check the graph:
 jj log
 ```
 
-You now have two independent feature branches, both based on main:
+Priority is stacked on top of due-dates:
+
+```
+@  feat/priority   feat: add priority field to Task type
+◉  feat/due-dates  feat: display due dates in 'todo list'
+◉                  feat: add --due flag to 'todo add' command
+◉                  feat: add dueDate field to Task type
+◉  main
+```
+
+### Realizing they should be independent
+
+These features don't actually depend on each other. You want to ship them as separate PRs. In Git, you'd have to carefully rebase and cherry-pick. In jj:
+
+```bash
+jj parallelize feat/due-dates feat/priority
+```
+
+Check the graph:
+
+```bash
+jj log
+```
+
+Now they're siblings, both branching from main:
 
 ```
 ◉  feat/due-dates  feat: display due dates in 'todo list'
@@ -632,12 +655,14 @@ You now have two independent feature branches, both based on main:
 ◉                  feat: add dueDate field to Task type
 │ @  feat/priority  feat: add priority field to Task type
 ├─╯
-◉  main (includes the bugfix)
+◉  main
 ```
 
-### The problem
+One command. The priority commit was rebased onto main (the common ancestor), and both branches are now independent.
 
-You want to test both features together. In Git, you'd have to:
+### Testing features together
+
+You want to test both features combined before shipping. In Git, you'd have to:
 1. Merge one branch into the other (polluting history), or
 2. Create a temporary integration branch, or
 3. Cherry-pick commits around
@@ -780,6 +805,7 @@ This workflow has no Git equivalent. It's one of jj's unique strengths.
 | **Rewriting history** | |
 | Rebase stack onto new base | `jj rebase -s <start> -d <dest>` |
 | Move one commit earlier | `jj rebase -r <change> --before <target>` |
+| Make stacked commits into siblings | `jj parallelize <change1> <change2>` |
 | Split a commit | `jj split -r <change>` |
 | Squash into parent | `jj squash` |
 | Abandon a commit | `jj abandon` |
