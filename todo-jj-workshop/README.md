@@ -546,6 +546,23 @@ jj log
 
 The fix commit disappears from your local stack (it's in main now). Your feature stack rebases cleanly on top of the updated main.
 
+For this workshop, let's simulate the fix PR being merged. We'll create a merge commit and move main forward:
+
+```bash
+jj new main fix/done-task-id -m "Merge fix/done-task-id into main"
+jj bookmark set main -r @
+jj new
+```
+
+Now rebase the feature branch onto the updated main:
+
+```bash
+jj rebase -s feat/due-dates -d main
+jj log
+```
+
+Your feature stack is now based on main (which includes the fix).
+
 ---
 
 ## Part 8: Mega Merge and Absorb
@@ -554,11 +571,11 @@ So far we've worked on one feature stack. But what if you're developing multiple
 
 ### Setup: A parallel feature branch
 
-First, let's create a separate feature branch for task priorities. This branch will exist *in parallel* to our due-dates stack.
+Let's create a separate feature branch for task priorities. This branch will exist *in parallel* to our due-dates stack, both branching from main.
 
 ```bash
-# Start from main (after the bugfix)
-jj new fix/done-task-id -m "feat: add priority field to Task type"
+# Start from main (which now includes the bugfix)
+jj new main -m "feat: add priority field to Task type"
 ```
 
 Load the priority feature:
@@ -581,7 +598,7 @@ Check the graph:
 jj log
 ```
 
-You now have two independent feature branches:
+You now have two independent feature branches, both based on main:
 
 ```
 ◉  feat/due-dates  feat: display due dates in 'todo list'
@@ -589,8 +606,7 @@ You now have two independent feature branches:
 ◉                  feat: add dueDate field to Task type
 │ @  feat/priority  feat: add priority field to Task type
 ├─╯
-◉  fix/done-task-id  fix: done command should find task by ID
-◉  main
+◉  main (includes the bugfix)
 ```
 
 ### The problem
