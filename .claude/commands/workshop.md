@@ -51,6 +51,27 @@ No `git add` needed - it is already part of the working copy commit
 jj restore README.md
 ```
 
+**Step 1.4** - Revsets basics:
+
+Revsets are how you reference commits. Show the table:
+
+| Revset | Use case |
+|--------|----------|
+| `@` | Current commit |
+| `@-` | Parent of current - `jj diff -r @-` to see parent's changes |
+| `@--` | Grandparent (chain as needed) |
+| `abc` | Any change ID - use the short prefix from `jj log` |
+| `abc-` | Parent of that change - `jj rebase -d abc-` to rebase onto abc's parent |
+| `main..@` | Your work since main - `jj log -r 'main..@'` |
+| `roots(main..@)` | First commit of your branch - useful for rebasing entire stack |
+
+Key insight: any change ID works like `@`. If `xyz` is a change ID, then `xyz-` is its parent.
+
+```bash
+jj log -r '@-'
+jj log -r 'main..@'
+```
+
 ---
 
 ## Part 2: Planning with Empty Commits

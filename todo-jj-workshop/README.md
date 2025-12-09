@@ -84,6 +84,32 @@ Look at `jj log` output:
 
 You'll almost always use change IDs. They're shorter to type and don't change when you edit a commit.
 
+### Revsets
+
+Revsets are how you reference commits. The basics:
+
+| Revset | Use case |
+|--------|----------|
+| `@` | Current commit |
+| `@-` | Parent of current - `jj diff -r @-` to see parent's changes |
+| `@--` | Grandparent (chain as needed) |
+| `abc` | Any change ID - use the short prefix from `jj log` |
+| `abc-` | Parent of that change - `jj rebase -d abc-` to rebase onto abc's parent |
+| `main..@` | Your work since main - `jj log -r 'main..@'` |
+| `roots(main..@)` | First commit of your branch - useful for rebasing entire stack |
+
+The key insight: any change ID works like `@`. If `xyz` is a change ID:
+- `xyz-` = its parent
+- `xyz--` = its grandparent
+- `main..xyz` = commits from main to xyz
+
+Try it:
+
+```bash
+jj log -r '@-'
+jj log -r 'main..@'
+```
+
 ---
 
 ## Part 2: Planning with Empty Commits
