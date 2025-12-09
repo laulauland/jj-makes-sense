@@ -1,0 +1,631 @@
+# jj Workshop: Git Evolved
+
+A hands-on workshop for Git users learning Jujutsu (jj).
+
+**What we'll build:** Add due dates to a todo CLI, discover a bug mid-way, and ship the fix *before* the feature—cleanly.
+
+**What you'll learn:**
+- The working copy is always a commit (no staging area)
+- Planning with empty commits
+- Reordering commits when discovery order ≠ logical order
+- Splitting commits that grew too big
+- Conflicts as data, not a blocked state
+- Shipping stacked PRs to GitHub
+
+---
+
+## Setup
+
+1. Install jj: https://martinvonz.github.io/jj/latest/install/
+2. Install Bun: https://bun.sh
+3. Clone this repo and init jj:
+   ```bash
+   git clone <repo-url>
+   cd todo-jj-workshop
+   jj git init --colocate
+   bun install
+   ```
+
+4. Verify the CLI works:
+   ```bash
+   bun run todo add "test task"
+   bun run todo list
+   bun run todo done 1
+   ```
+
+5. Clear the test data:
+   ```bash
+   rm -f data/todos.json
+   ```
+
+---
+
+## Part 1: Orientation
+
+### The working copy is a commit
+
+In jj, your working directory is always a commit. There's no staging area.
+
+```bash
+jj log
+```
+
+You'll see `@` — that's your current commit. Make a change:
+
+```bash
+echo "# test" >> README.md
+jj status
+jj log
+```
+
+The change is already tracked. No `git add` needed.
+
+Undo that:
+
+```bash
+jj restore README.md
+```
+
+### No branches (by default)
+
+Notice there are no branch names in `jj log`. jj uses **anonymous branches**. You only create named "bookmarks" when you need to push to GitHub.
+
+### Change IDs vs Commit IDs
+
+Look at `jj log` output:
+
+```
+@  kpqxywon user@example.com 2025-01-15 10:30:00 a1b2c3d4
+│  (empty) (no description set)
+◉  zzzzzzzz root() 00000000
+```
+
+- Letters like `kpqxywon` = **change ID** (stable, survives rebases)
+- Hex like `a1b2c3d4` = **commit ID** (changes when content changes)
+
+You'll almost always use change IDs. They're shorter to type and don't change when you edit a commit.
+
+---
+
+## Part 2: Planning with Empty Commits
+
+We're going to add due dates to the todo CLI. Let's plan our commits first:
+
+```bash
+jj new -m "feat: add dueDate field to Task type"
+jj new -m "feat: add --due flag to 'todo add' command"
+jj new -m "feat: display due dates in 'todo list'"
+```
+
+Check your plan:
+
+```bash
+jj log
+```
+
+You now have 3 empty commits stacked on top of each other. This is your plan.
+
+```
+@  xxxxxxxxx  (empty) feat: display due dates in 'todo list'
+◉  yyyyyyyyy  (empty) feat: add --due flag to 'todo add' command
+◉  zzzzzzzzz  (empty) feat: add dueDate field to Task type
+◉  main
+```
+
+**Why this matters:**
+- You're thinking about the shape before coding
+- Each commit is a reviewable unit
+- Empty commits are totally fine in jj
+
+---
+
+## Part 3: Filling In
+
+### Step 1: Add the due date field
+
+Navigate to the first empty commit:
+
+```bash
+jj prev
+jj prev
+```
+
+Or use the change ID directly:
+
+```bash
+jj edit <change-id-of-first-commit>
+```
+
+You're now on the first empty commit. Check with `jj log` — the `@` marker moved.
+
+Load the solution:
+
+```bash
+cp _steps/01-add-due-date-field/task.ts src/task.ts
+jj diff
+```
+
+See what changed? The `dueDate` field was added to the `Task` interface.
+
+### Step 2: Add the --due flag
+
+Move to the next commit:
+
+```bash
+jj next
+```
+
+Load the solution:
+
+```bash
+cp _steps/02-add-due-flag-cli/add.ts src/commands/add.ts
+jj diff
+```
+
+Test it:
+
+```bash
+bun run todo add "Buy groceries" --due 2025-01-20
+bun run todo list
+```
+
+### Step 3: Display due dates
+
+```bash
+jj next
+```
+
+Load the solution:
+
+```bash
+cp _steps/03-display-due-dates/list.ts src/commands/list.ts
+jj diff
+```
+
+Test it:
+
+```bash
+bun run todo list
+```
+
+You should see the due date displayed.
+
+### Check your stack
+
+```bash
+jj log
+```
+
+Three commits, each with real changes. Nice and clean.
+
+---
+
+## Part 4: Discovering a Bug
+
+Let's reset our test data and try the full flow:
+
+```bash
+rm -f data/todos.json
+bun run todo add "First task"
+bun run todo add "Second task"
+bun run todo list
+```
+
+You should see:
+
+```
+  [ ] #1 - First task
+  [ ] #2 - Second task
+```
+
+Now complete task #1:
+
+```bash
+bun run todo done 1
+bun run todo list
+```
+
+**Wait.** Task #1 should be marked done, but task #2 is marked instead!
+
+```
+  [ ] #1 - First task
+  [✓] #2 - Second task
+```
+
+This is a bug in the original code. The `done` command uses array index instead of task ID.
+
+### The Git instinct
+
+In Git, you might:
+- Fix it in a new commit at the top, deal with it later
+- Or try to `git rebase -i` to move it earlier (scary)
+
+### The jj way
+
+Put the fix where it belongs: **before** our feature commits.
+
+```bash
+jj new main -m "fix: done command should find task by ID, not array index"
+```
+
+This creates a new commit with `main` as its parent—not on top of your feature stack.
+
+Load the fix:
+
+```bash
+cp _steps/04-bugfix-done-first-task/done.ts src/commands/done.ts
+jj diff
+```
+
+Test it:
+
+```bash
+rm -f data/todos.json
+bun run todo add "First task"
+bun run todo add "Second task"
+bun run todo done 1
+bun run todo list
+```
+
+Now task #1 is correctly marked done.
+
+### Look at the graph
+
+```bash
+jj log
+```
+
+The fix commit is "floating" — it branches off from main, not connected to your feature stack:
+
+```
+◉  xxxxxxxxx  feat: display due dates in 'todo list'
+◉  yyyyyyyyy  feat: add --due flag to 'todo add' command
+◉  zzzzzzzzz  feat: add dueDate field to Task type
+│ @  fffffffff  fix: done command should find task by ID, not array index
+├─╯
+◉  main
+```
+
+### Rebase the feature on top of the fix
+
+We want the fix to come *before* the feature in history:
+
+```bash
+jj rebase -s <change-id-of-first-feature-commit> -d @
+```
+
+Replace `<change-id-of-first-feature-commit>` with the actual change ID of "feat: add dueDate field to Task type".
+
+Check the result:
+
+```bash
+jj log
+```
+
+Now the history is: `main → bugfix → feature1 → feature2 → feature3`
+
+```
+@  xxxxxxxxx  feat: display due dates in 'todo list'
+◉  yyyyyyyyy  feat: add --due flag to 'todo add' command
+◉  zzzzzzzzz  feat: add dueDate field to Task type
+◉  fffffffff  fix: done command should find task by ID, not array index
+◉  main
+```
+
+The fix goes before the feature, as it should. **One command.**
+
+### The safety net
+
+Made a mistake? Check the operation log:
+
+```bash
+jj op log
+```
+
+This shows every operation you've done. Undo the last one:
+
+```bash
+jj op undo
+```
+
+Or restore to any point:
+
+```bash
+jj op restore <operation-id>
+```
+
+Try it: undo the rebase, look at the graph, then redo it.
+
+---
+
+## Part 5: Splitting a Commit
+
+Let's say a reviewer asks: "Can you split the --due flag commit? Separate the arg parsing from the validation logic."
+
+First, find the change ID of that commit:
+
+```bash
+jj log
+```
+
+Then split it:
+
+```bash
+jj split -r <change-id-of-due-flag-commit>
+```
+
+This opens an interactive editor. You'll see all the changes in that commit. Select which changes go in the **first** commit (the rest become a second commit).
+
+For this exercise:
+- First commit: the argument parsing logic
+- Second commit: the validation and error handling
+
+After you save and close the editor, check the result:
+
+```bash
+jj log
+```
+
+Your stack now has more commits. Descendants were automatically rebased on top of the split.
+
+**In Git, this would require:**
+1. `git rebase -i` to mark the commit as "edit"
+2. `git reset HEAD^` to unstage
+3. Carefully `git add -p` to stage the first half
+4. `git commit`
+5. `git add .` and `git commit` for the second half
+6. `git rebase --continue`
+7. Resolve any conflicts in downstream commits
+8. Hope you didn't mess up
+
+**In jj:** one command, interactive selection, done.
+
+---
+
+## Part 6: Conflicts
+
+Let's see how jj handles conflicts differently than Git.
+
+First, go back to working on top of your stack:
+
+```bash
+jj new
+```
+
+Now create a conflicting change off of main:
+
+```bash
+jj new main -m "experiment: try a different Task structure"
+```
+
+Edit `src/task.ts` to make a conflicting change (e.g., rename `dueDate` to `deadline`):
+
+```bash
+# Make some edit to src/task.ts that conflicts with your feature
+jj diff
+```
+
+Now try to rebase it onto your feature:
+
+```bash
+jj rebase -d <change-id-of-your-feature-tip>
+jj log
+```
+
+The commit shows `(conflict)`:
+
+```
+@  xxxxxxxxx  (conflict) experiment: try a different Task structure
+◉  yyyyyyyyy  feat: display due dates in 'todo list'
+...
+```
+
+### You're not blocked
+
+In Git, a conflict stops everything. You must resolve it before doing anything else.
+
+In jj, conflicts are **data**, not a broken state. You can:
+
+```bash
+jj new  # keep working on top of the conflict
+```
+
+Or work on something else entirely:
+
+```bash
+jj edit <some-other-change>
+```
+
+The conflict just sits there until you're ready to deal with it.
+
+### Resolving the conflict
+
+When you're ready:
+
+```bash
+jj edit <conflicted-change>
+```
+
+Look at the conflicted file:
+
+```bash
+cat src/task.ts
+```
+
+You'll see conflict markers. Edit the file to resolve them, removing the markers.
+
+Check if it's resolved:
+
+```bash
+jj status
+```
+
+Once the conflict markers are gone, jj knows it's resolved.
+
+### Clean up
+
+Let's abandon this experimental commit and get back to our feature:
+
+```bash
+jj abandon
+jj edit <your-feature-tip>
+jj new
+```
+
+---
+
+## Part 7: Shipping to GitHub
+
+### Bookmarks are PR handles
+
+In jj, "bookmarks" are like Git branches, but they **don't move automatically** when you commit.
+
+Create bookmarks for your PRs:
+
+```bash
+jj bookmark create fix/done-task-id -r <bugfix-change-id>
+jj bookmark create feat/due-dates -r <last-feature-change-id>
+```
+
+Check them:
+
+```bash
+jj log
+```
+
+You'll see the bookmark names next to the commits.
+
+### Push to GitHub
+
+```bash
+jj git push --all
+```
+
+You now have two PRs:
+1. `fix/done-task-id` — the bugfix
+2. `feat/due-dates` — the feature (based on the bugfix)
+
+The feature PR shows it's based on the fix PR. Reviewers see a clean stack.
+
+### Bookmarks don't follow you
+
+This is different from Git! In Git, when you commit, the branch moves with you.
+
+In jj, bookmarks stay where you put them. Try it:
+
+```bash
+jj new -m "add tests"
+echo "// TODO: add tests" >> src/commands/add.ts
+jj log
+```
+
+Notice the `feat/due-dates` bookmark is still on the old commit, not on your new "add tests" commit.
+
+**This is actually good:**
+- You control exactly what's in each PR
+- Work-in-progress stays out of the PR until you're ready
+- No accidental "pushed my debug commit" moments
+
+### Updating a PR
+
+When you're ready to include new commits in the PR:
+
+```bash
+jj bookmark set feat/due-dates -r @
+jj git push
+```
+
+### When a PR merges
+
+After the fix PR merges to main on GitHub:
+
+```bash
+jj git fetch
+jj rebase -d main
+jj log
+```
+
+The fix commit disappears from your local stack (it's in main now). Your feature stack rebases cleanly on top of the updated main.
+
+---
+
+## Cheat Sheet
+
+| What | Command |
+|------|---------|
+| See the graph | `jj log` |
+| Current status | `jj st` |
+| See what changed | `jj diff` |
+| See diff for specific commit | `jj diff -r <change>` |
+| **Creating commits** | |
+| Plan an empty commit | `jj new -m "..."` |
+| Create commit with specific parent | `jj new <parent> -m "..."` |
+| **Navigating** | |
+| Work on a specific commit | `jj edit <change>` |
+| Move to next commit in stack | `jj next` |
+| Move to previous commit | `jj prev` |
+| **Rewriting history** | |
+| Rebase stack onto new base | `jj rebase -s <start> -d <dest>` |
+| Move one commit earlier | `jj rebase -r <change> --before <target>` |
+| Split a commit | `jj split -r <change>` |
+| Squash into parent | `jj squash` |
+| Abandon a commit | `jj abandon` |
+| Restore a file | `jj restore <path>` |
+| **Safety net** | |
+| See operation history | `jj op log` |
+| Undo last operation | `jj op undo` |
+| Restore to specific operation | `jj op restore <operation-id>` |
+| **GitHub workflow** | |
+| Create a bookmark (for PR) | `jj bookmark create <name> -r <change>` |
+| Move a bookmark | `jj bookmark set <name> -r <change>` |
+| Push to GitHub | `jj git push --all` |
+| Fetch from GitHub | `jj git fetch` |
+
+---
+
+## Key Concepts
+
+### 1. Working copy is always a commit
+No staging area. No "uncommitted changes" limbo. Every state is recorded.
+
+### 2. Change IDs are stable
+Use them instead of commit hashes. They survive rebases and edits.
+
+### 3. Anonymous branches by default
+The graph is your organization. Bookmarks are just handles for GitHub.
+
+### 4. Conflicts are data
+You're never blocked. Resolve conflicts when you're ready, not when Git demands it.
+
+### 5. Operations are undoable
+`jj op undo` is your safety net. Experiment fearlessly.
+
+### 6. Discovery order ≠ logical order
+Found a bug while building a feature? Put the fix where it belongs in history, not where you found it.
+
+---
+
+## What's Different from Git
+
+| Git | jj |
+|-----|-----|
+| Staging area + working copy | Working copy is a commit |
+| Branches move with you | Bookmarks stay where you put them |
+| `git stash` for temporary work | Just `jj new` and come back |
+| `git rebase -i` for everything | `jj split`, `jj squash`, `jj rebase` — separate tools |
+| Conflicts block you | Conflicts are just data |
+| `git reflog` for recovery | `jj op log` + `jj op undo` |
+| Branch names required | Anonymous branches by default |
+
+---
+
+## Next Steps
+
+- Read the official tutorial: https://martinvonz.github.io/jj/latest/tutorial/
+- Steve Klabnik's tutorial: https://steveklabnik.github.io/jujutsu-tutorial/
+- Chris Krycho's jj-init: https://v5.chriskrycho.com/essays/jj-init/
+
+Advanced topics to explore:
+- Working on multiple branches simultaneously (mega-merge workflow)
+- `jj absorb` for auto-routing changes to the right commits
+- Workspaces for multiple working copies
