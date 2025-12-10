@@ -12,9 +12,8 @@ export async function done(args: string[]): Promise<void> {
   const id = parseInt(idArg, 10);
   const tasks = await loadTasks();
 
-  // BUG: Uses array index instead of task.id
-  // This fails because task IDs start at 1, not 0
-  const task = tasks[id];
+  // FIXED: Find by task.id, not array index
+  const task = tasks.find((t) => t.id === id);
 
   if (!task) {
     console.error(`Error: Task #${id} not found`);
