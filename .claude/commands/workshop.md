@@ -179,11 +179,17 @@ Now it is: main -> fix -> feat1 -> feat2 -> feat3
 
 **The big idea:** `jj split` lets you break a commit into pieces.
 
-This is interactive and may not work in all terminals. Explain:
-- `jj split -r CHANGE` opens an editor
-- You select which changes go in the first commit
-- The rest become a second commit
-- Descendants auto-rebase
+This is interactive. `jj split -r CHANGE` opens an editor with sections of changes.
+
+Guide them to select **Section 1/4** only (argument parsing), leave the rest unchecked:
+```
+[●] Section 1/4  ← select this
+[ ] Section 2/4  ← leave unchecked
+[ ] Section 3/4  ← leave unchecked
+[ ] Section 4/4  ← leave unchecked
+```
+
+Press `c` to confirm. First commit gets selected changes, second commit gets the rest. Descendants auto-rebase.
 
 ---
 

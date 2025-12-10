@@ -372,13 +372,20 @@ Then split it:
 jj split -r <change-id-of-due-flag-commit>
 ```
 
-This opens an interactive editor. You'll see all the changes in that commit. Select which changes go in the **first** commit (the rest become a second commit).
+This opens an interactive editor showing sections of changes. Use arrow keys to navigate, space to toggle sections.
 
-For this exercise:
-- First commit: the argument parsing logic
-- Second commit: the validation and error handling
+For this exercise, select **Section 1/4** only (the `--due` flag parsing loop). Leave the rest unchecked:
 
-After you save and close the editor, check the result:
+```
+[●] Section 1/4  ← select this (argument parsing)
+[ ] Section 2/4  ← leave unchecked (validation)
+[ ] Section 3/4  ← leave unchecked (dueDate field)
+[ ] Section 4/4  ← leave unchecked (output message)
+```
+
+Press `c` to confirm. The selected changes become the first commit, the rest become a second commit.
+
+Check the result:
 
 ```bash
 jj log
