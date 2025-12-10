@@ -97,10 +97,9 @@ Three empty commits stacked. This is your roadmap.
 
 **The big idea:** Navigate to commits and add code.
 
-**Step 3.1** - Go to first planned commit:
+**Step 3.1** - Go to first planned commit (find its change ID in `jj log`):
 ```bash
-jj prev
-jj prev
+jj edit <change-id-of-first-commit>
 ```
 
 **Step 3.2** - Add the dueDate field:
@@ -111,14 +110,14 @@ jj diff
 
 **Step 3.3** - Move to next commit and add the --due flag:
 ```bash
-jj next
+jj next --edit
 cp _steps/02-add-due-flag-cli/add.ts src/commands/add.ts
 jj diff
 ```
 
 **Step 3.4** - Move to last commit and add display:
 ```bash
-jj next
+jj next --edit
 cp _steps/03-display-due-dates/list.ts src/commands/list.ts
 ```
 

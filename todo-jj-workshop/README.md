@@ -148,20 +148,13 @@ You now have 3 empty commits stacked on top of each other. This is your plan.
 
 ### Step 1: Add the due date field
 
-Navigate to the first empty commit:
-
-```bash
-jj prev
-jj prev
-```
-
-Or use the change ID directly:
+Navigate to the first empty commit (find its change ID in `jj log`):
 
 ```bash
 jj edit <change-id-of-first-commit>
 ```
 
-You're now on the first empty commit. Check with `jj log` — the `@` marker moved.
+Check with `jj log` — the `@` marker moved.
 
 Load the solution:
 
@@ -177,7 +170,7 @@ See what changed? The `dueDate` field was added to the `Task` interface.
 Move to the next commit:
 
 ```bash
-jj next
+jj next --edit
 ```
 
 Load the solution:
@@ -197,7 +190,7 @@ bun run todo list
 ### Step 3: Display due dates
 
 ```bash
-jj next
+jj next --edit
 ```
 
 Load the solution:
