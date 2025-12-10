@@ -236,15 +236,20 @@ gh pr create --head fix/done-task-id --base main --title "fix: done command shou
 ```
 Note: `jj git push` pushes branches but doesn't create PRs - use `gh` or the web UI.
 
-**Step 7.3** - Merge the fix PR on GitHub (web UI or `gh pr merge`), then fetch and rebase:
+**Step 7.3** - Merge the fix PR on GitHub (web UI or `gh pr merge`), then fetch:
 ```bash
 jj git fetch
-jj rebase -d main
+```
+
+**Step 7.4** - Rebase your feature stack onto updated main:
+```bash
+jj log
+jj rebase -s FIRST_FEATURE_CHANGE_ID -d main
 jj log
 ```
-The fix commit disappears from your local stack (it's in main now).
+Replace FIRST_FEATURE_CHANGE_ID with the change ID of "feat: add dueDate field". The fix commit disappears (it's in main now).
 
-**Step 7.4** - Create bookmark for the feature and push:
+**Step 7.5** - Create bookmark for the feature and push:
 ```bash
 jj bookmark create feat/due-dates -r LAST_FEATURE_CHANGE_ID
 jj git push --all
@@ -255,7 +260,7 @@ gh pr create --head feat/due-dates --base main --title "feat: add due dates to t
 
 ## Part 8: Mega Merge and Absorb
 
-**The big idea:** Stack work naturally, parallelize when needed, test features together, route fixes automatically.
+**The big idea:** Stack work naturally, rebase to reorganize, test features together, route fixes automatically.
 
 **Step 8.1** - You're ambitious, keep building on top of due-dates:
 ```bash
@@ -272,12 +277,12 @@ jj log
 ```
 Priority is on top of due-dates (a tall stack)
 
-**Step 8.3** - Realize these should be independent PRs. Parallelize them:
+**Step 8.3** - Realize these should be independent PRs. Rebase priority onto main:
 ```bash
-jj parallelize feat/due-dates feat/priority
+jj rebase -r feat/priority -d main
 jj log
 ```
-Now they're siblings, both branching from main. One command did the rebase.
+Now they're siblings, both branching from main.
 
 **Step 8.4** - Create mega merge (both features combined):
 ```bash
@@ -334,7 +339,7 @@ Congratulate them. Key takeaways:
 - Working copy = commit (no staging)
 - Plan with empty commits
 - Discovery order is not the same as logical order
-- Parallelize to turn a stack into siblings
+- Rebase to reorganize your stack
 - Mega merge to test features together
 - Absorb to route fixes automatically
 - `jj undo` is your safety net

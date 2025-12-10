@@ -517,11 +517,17 @@ gh pr create --head fix/done-task-id --base main --title "fix: done command shou
 
 ### Merge the fix PR
 
-Merge the fix PR on GitHub (use the web UI or `gh pr merge`). Then fetch and rebase your feature stack:
+Merge the fix PR on GitHub (use the web UI or `gh pr merge`). Then fetch the updated main:
 
 ```bash
 jj git fetch
-jj rebase -d main
+```
+
+Now rebase your feature stack onto the updated main. First, find the change ID of your first feature commit ("feat: add dueDate field"):
+
+```bash
+jj log
+jj rebase -s <first-feature-change-id> -d main
 jj log
 ```
 
@@ -529,7 +535,7 @@ The fix commit disappears from your local stack (it's in main now). Your feature
 
 ### Now ship the feature
 
-Create a bookmark for the feature and push:
+Create a bookmark for the feature (pointing to the tip of your feature stack) and push:
 
 ```bash
 jj bookmark create feat/due-dates -r <last-feature-change-id>
@@ -611,15 +617,10 @@ Priority is stacked on top of due-dates:
 
 ### Realizing they should be independent
 
-These features don't actually depend on each other. You want to ship them as separate PRs. In Git, you'd have to carefully rebase and cherry-pick. In jj:
+These features don't actually depend on each other. You want to ship them as separate PRs. In Git, you'd have to carefully rebase and cherry-pick. In jj, just rebase the priority commit onto main:
 
 ```bash
-jj parallelize feat/due-dates feat/priority
-```
-
-Check the graph:
-
-```bash
+jj rebase -r feat/priority -d main
 jj log
 ```
 
@@ -634,7 +635,7 @@ Now they're siblings, both branching from main:
 ◉  main
 ```
 
-One command. The priority commit was rebased onto main (the common ancestor), and both branches are now independent.
+One command. The priority commit moved from the top of the due-dates stack to branch directly from main.
 
 ### Testing features together
 
@@ -781,7 +782,7 @@ This workflow has no Git equivalent. It's one of jj's unique strengths.
 | **Rewriting history** | |
 | Rebase stack onto new base | `jj rebase -s <start> -d <dest>` |
 | Move one commit earlier | `jj rebase -r <change> --before <target>` |
-| Make stacked commits into siblings | `jj parallelize <change1> <change2>` |
+| Move commit to different parent | `jj rebase -r <change> -d <dest>` |
 | Split a commit | `jj split -r <change>` |
 | Squash into parent | `jj squash` |
 | Abandon a commit | `jj abandon` |
