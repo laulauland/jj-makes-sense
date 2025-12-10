@@ -343,7 +343,7 @@ jj op log
 This shows every operation you've done. Undo the last one:
 
 ```bash
-jj op undo
+jj undo
 ```
 
 Or restore to any point:
@@ -411,38 +411,26 @@ Your stack now has more commits. Descendants were automatically rebased on top o
 
 Let's see how jj handles conflicts differently than Git.
 
-First, go back to working on top of your stack:
+Create a conflicting change off of your feature tip. We'll rename `dueDate` to `deadline`:
 
 ```bash
-jj new
-```
-
-Now create a conflicting change off of main:
-
-```bash
-jj new main -m "experiment: try a different Task structure"
-```
-
-Edit `src/task.ts` to make a conflicting change (e.g., rename `dueDate` to `deadline`):
-
-```bash
-# Make some edit to src/task.ts that conflicts with your feature
+jj new <change-id-of-your-feature-tip> -m "experiment: rename dueDate to deadline"
+cp _steps/05-conflict-experiment/task.ts src/task.ts
 jj diff
 ```
 
-Now try to rebase it onto your feature:
+Now rebase it onto main (where `dueDate` doesn't exist yet):
 
 ```bash
-jj rebase -d <change-id-of-your-feature-tip>
+jj rebase -d main
 jj log
 ```
 
 The commit shows `(conflict)`:
 
 ```
-@  xxxxxxxxx  (conflict) experiment: try a different Task structure
-◉  yyyyyyyyy  feat: display due dates in 'todo list'
-...
+@  xxxxxxxxx  (conflict) experiment: rename dueDate to deadline
+◉  main
 ```
 
 ### You're not blocked
@@ -494,7 +482,6 @@ Let's abandon this experimental commit and get back to our feature:
 ```bash
 jj abandon
 jj edit <your-feature-tip>
-jj new
 ```
 
 ---
@@ -505,32 +492,50 @@ jj new
 
 In jj, "bookmarks" are like Git branches, but they **don't move automatically** when you commit.
 
-Create bookmarks for your PRs:
+Create a bookmark for the bugfix PR:
 
 ```bash
 jj bookmark create fix/done-task-id -r <bugfix-change-id>
-jj bookmark create feat/due-dates -r <last-feature-change-id>
-```
-
-Check them:
-
-```bash
 jj log
 ```
 
-You'll see the bookmark names next to the commits.
+You'll see the bookmark name next to the commit.
 
-### Push to GitHub
+### Push and create the PR
+
+Push the bookmark to GitHub:
 
 ```bash
 jj git push --all
 ```
 
-You now have two PRs:
-1. `fix/done-task-id` — the bugfix
-2. `feat/due-dates` — the feature (based on the bugfix)
+This pushes branches but doesn't create PRs. Create the PR using `gh` or the GitHub web UI:
 
-The feature PR shows it's based on the fix PR. Reviewers see a clean stack.
+```bash
+gh pr create --head fix/done-task-id --base main --title "fix: done command should find task by ID" --body "Fixes the bug where marking task #1 as done marked task #2 instead."
+```
+
+### Merge the fix PR
+
+Merge the fix PR on GitHub (use the web UI or `gh pr merge`). Then fetch and rebase your feature stack:
+
+```bash
+jj git fetch
+jj rebase -d main
+jj log
+```
+
+The fix commit disappears from your local stack (it's in main now). Your feature commits rebase cleanly on top.
+
+### Now ship the feature
+
+Create a bookmark for the feature and push:
+
+```bash
+jj bookmark create feat/due-dates -r <last-feature-change-id>
+jj git push --all
+gh pr create --head feat/due-dates --base main --title "feat: add due dates to tasks" --body "Adds --due flag and displays due dates in list."
+```
 
 ### Bookmarks don't follow you
 
@@ -559,35 +564,6 @@ When you're ready to include new commits in the PR:
 jj bookmark set feat/due-dates -r @
 jj git push
 ```
-
-### When a PR merges
-
-After the fix PR merges to main on GitHub:
-
-```bash
-jj git fetch
-jj rebase -d main
-jj log
-```
-
-The fix commit disappears from your local stack (it's in main now). Your feature stack rebases cleanly on top of the updated main.
-
-For this workshop, let's simulate the fix PR being merged. We'll create a merge commit and move main forward:
-
-```bash
-jj new main fix/done-task-id -m "Merge fix/done-task-id into main"
-jj bookmark set main -r @
-jj new
-```
-
-Now rebase the feature branch onto the updated main:
-
-```bash
-jj rebase -s feat/due-dates -d main
-jj log
-```
-
-Your feature stack is now based on main (which includes the fix).
 
 ---
 
@@ -813,7 +789,7 @@ This workflow has no Git equivalent. It's one of jj's unique strengths.
 | Absorb changes into stack | `jj absorb` |
 | **Safety net** | |
 | See operation history | `jj op log` |
-| Undo last operation | `jj op undo` |
+| Undo last operation | `jj undo` |
 | Restore to specific operation | `jj op restore <operation-id>` |
 | **GitHub workflow** | |
 | Create a bookmark (for PR) | `jj bookmark create <name> -r <change>` |
@@ -840,7 +816,7 @@ The graph is your organization. Bookmarks are just handles for GitHub.
 You're never blocked. Resolve conflicts when you're ready, not when Git demands it.
 
 ### 5. Operations are undoable
-`jj op undo` is your safety net. Experiment fearlessly.
+`jj undo` is your safety net. Experiment fearlessly.
 
 ### 6. Discovery order ≠ logical order
 Found a bug while building a feature? Put the fix where it belongs in history, not where you found it.
@@ -856,7 +832,7 @@ Found a bug while building a feature? Put the fix where it belongs in history, n
 | `git stash` for temporary work | Just `jj new` and come back |
 | `git rebase -i` for everything | `jj split`, `jj squash`, `jj rebase` — separate tools |
 | Conflicts block you | Conflicts are just data |
-| `git reflog` for recovery | `jj op log` + `jj op undo` |
+| `git reflog` for recovery | `jj op log` + `jj undo` |
 | Branch names required | Anonymous branches by default |
 
 ---
@@ -892,7 +868,7 @@ Found a bug while building a feature? Put the fix where it belongs in history, n
 | Undo last commit | `git reset HEAD~1` | `jj undo` |
 | Discard changes | `git checkout -- file` | `jj restore file` |
 | View undo history | `git reflog` | `jj op log` |
-| Undo any operation | `git reset --hard <reflog-ref>` | `jj op undo` or `jj op restore <op>` |
+| Undo any operation | `git reset --hard <reflog-ref>` | `jj undo` or `jj op restore <op>` |
 | **Remote** | | |
 | Fetch | `git fetch` | `jj git fetch` |
 | Push | `git push` | `jj git push` |

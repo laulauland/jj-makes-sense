@@ -11,7 +11,7 @@ Guide the user through the jj workshop interactively. They will run commands, se
 1. Present one step at a time
 2. Show the command they should run in a code block
 3. After they run it, explain what happened
-4. If something goes wrong, help them recover with `jj op undo`
+4. If something goes wrong, help them recover with `jj undo`
 5. Ask "Ready for the next step?" before proceeding
 
 ## Starting
@@ -197,22 +197,23 @@ Press `c` to confirm. First commit gets selected changes, second commit gets the
 
 **The big idea:** Conflicts are data, not a blocked state.
 
-**Step 6.1** - Create a conflicting experiment:
+**Step 6.1** - Create a conflicting change off your feature tip:
 ```bash
-jj new main -m "experiment: rename dueDate to deadline"
+jj new <feature-tip-change-id> -m "experiment: rename dueDate to deadline"
+cp _steps/05-conflict-experiment/task.ts src/task.ts
 ```
 
-**Step 6.2** - Make a conflicting change (edit task.ts manually to change dueDate to deadline)
-
-**Step 6.3** - Try to rebase onto feature:
+**Step 6.2** - Rebase onto main (where dueDate doesn't exist):
 ```bash
-jj rebase -d feat/due-dates
+jj rebase -d main
+jj log
 ```
-Shows conflict, but you can keep working.
+Shows `(conflict)` but you can keep working - conflicts are data, not a blocked state.
 
-**Step 6.4** - Abandon the experiment:
+**Step 6.3** - Abandon the experiment:
 ```bash
 jj abandon
+jj edit <your-feature-tip>
 ```
 
 ---
@@ -221,42 +222,34 @@ jj abandon
 
 **The big idea:** Bookmarks are PR handles, not moving branch pointers.
 
-**Step 7.1** - Find your change IDs:
-```bash
-jj log
-```
-
-**Step 7.2** - Create bookmarks:
+**Step 7.1** - Create bookmark for the bugfix:
 ```bash
 jj bookmark create fix/done-task-id -r BUGFIX_CHANGE_ID
+jj log
+```
+Replace BUGFIX_CHANGE_ID with the actual change ID from jj log
+
+**Step 7.2** - Push and create the PR:
+```bash
+jj git push --all
+gh pr create --head fix/done-task-id --base main --title "fix: done command should find task by ID"
+```
+Note: `jj git push` pushes branches but doesn't create PRs - use `gh` or the web UI.
+
+**Step 7.3** - Merge the fix PR on GitHub (web UI or `gh pr merge`), then fetch and rebase:
+```bash
+jj git fetch
+jj rebase -d main
+jj log
+```
+The fix commit disappears from your local stack (it's in main now).
+
+**Step 7.4** - Create bookmark for the feature and push:
+```bash
 jj bookmark create feat/due-dates -r LAST_FEATURE_CHANGE_ID
+jj git push --all
+gh pr create --head feat/due-dates --base main --title "feat: add due dates to tasks"
 ```
-Replace the CHANGE_ID placeholders with actual change IDs from jj log
-
-**Step 7.3** - See bookmarks in log:
-```bash
-jj log
-```
-Bookmarks appear next to commits
-
-**Step 7.4** - (Do not actually push unless you want to)
-Explain: `jj git push --all` would create stacked PRs
-
-**Step 7.5** - Simulate the fix PR getting merged to main:
-
-In real life, the fix PR would be merged on GitHub. We will simulate this by moving main forward:
-```bash
-jj new main fix/done-task-id -m "Merge fix/done-task-id into main"
-jj bookmark set main -r @
-jj new
-```
-
-**Step 7.6** - Rebase the feature branch onto updated main:
-```bash
-jj rebase -s feat/due-dates -d main
-jj log
-```
-Now feat/due-dates is based directly on main (which includes the fix)
 
 ---
 
@@ -344,6 +337,6 @@ Congratulate them. Key takeaways:
 - Parallelize to turn a stack into siblings
 - Mega merge to test features together
 - Absorb to route fixes automatically
-- `jj op undo` is your safety net
+- `jj undo` is your safety net
 
 Point to README.md for the cheat sheet and Git comparison table.
