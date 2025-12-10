@@ -260,72 +260,65 @@ gh pr create --head feat/due-dates --base main --title "feat: add due dates to t
 
 ## Part 8: Mega Merge and Absorb
 
-**The big idea:** Stack work naturally, rebase to reorganize, test features together, route fixes automatically.
+**The big idea:** Develop features in parallel, test them together, route fixes automatically.
 
-**Step 8.1** - You're ambitious, keep building on top of due-dates:
+**Step 8.1** - Create a second feature branch (clear command) directly off main:
 ```bash
-jj new -m "feat: add priority field to Task type"
-cp _steps/06-priority-feature/task.ts src/task.ts
-cp _steps/06-priority-feature/add.ts src/commands/add.ts
-cp _steps/06-priority-feature/list.ts src/commands/list.ts
-jj bookmark create feat/priority -r @
+jj new main -m "feat: add clear command to remove completed tasks"
+cp _steps/06-clear-feature/clear.ts src/commands/clear.ts
+cp _steps/06-clear-feature/index.ts src/index.ts
+jj bookmark create feat/clear -r @
 ```
 
-**Step 8.2** - See priority stacked on due-dates:
+**Step 8.2** - See two parallel branches:
 ```bash
 jj log
 ```
-Priority is on top of due-dates (a tall stack)
+feat/due-dates and feat/clear both branch from main.
 
-**Step 8.3** - Realize these should be independent PRs. Rebase priority onto main:
+**Step 8.3** - Create mega merge (both features combined):
 ```bash
-jj rebase -r feat/priority -d main
-jj log
-```
-Now they're siblings, both branching from main.
-
-**Step 8.4** - Create mega merge (both features combined):
-```bash
-jj new feat/due-dates feat/priority -m "mega: testing both features"
+jj new feat/due-dates feat/clear -m "mega: testing both features"
 ```
 
-**Step 8.5** - Resolve the merge:
+**Step 8.4** - Resolve the merge (both modified index.ts):
 ```bash
-cp _steps/07-mega-merge/task.ts src/task.ts
-cp _steps/07-mega-merge/add.ts src/commands/add.ts
-cp _steps/07-mega-merge/list.ts src/commands/list.ts
+cp _steps/07-mega-merge/index.ts src/index.ts
 ```
 
-**Step 8.6** - Test both features together:
+**Step 8.5** - Test both features together:
 ```bash
 rm -f data/todos.json
-bun run todo add "Important" --due 2025-01-20 --priority high
+bun run todo add "Task one" --due 2025-01-20
+bun run todo add "Task two"
+bun run todo done 1
+bun run todo list
+bun run todo clear
 bun run todo list
 ```
-Both due date and priority show.
+Due dates display, and clear removes completed tasks.
 
-**Step 8.7** - Simulate review feedback (apply fixes):
+**Step 8.6** - Simulate review feedback (apply fixes):
 ```bash
-cp _steps/08-absorb-fixes/task.ts src/task.ts
-cp _steps/08-absorb-fixes/add.ts src/commands/add.ts
 cp _steps/08-absorb-fixes/list.ts src/commands/list.ts
+cp _steps/08-absorb-fixes/clear.ts src/commands/clear.ts
 jj diff
 ```
-Changes span both branches
+Changes span both branches.
 
-**Step 8.8** - Absorb routes each fix to the right commit:
+**Step 8.7** - Absorb routes each fix to the right commit:
 ```bash
 jj absorb
 ```
 
-**Step 8.9** - Verify fixes were routed:
+**Step 8.8** - Verify fixes were routed:
 ```bash
 jj log
 jj diff -r feat/due-dates
-jj diff -r feat/priority
+jj diff -r feat/clear
 ```
 
-**Step 8.10** - Abandon mega merge, ship separately:
+**Step 8.9** - Abandon mega merge, ship separately:
 ```bash
 jj abandon
 jj log
@@ -339,7 +332,6 @@ Congratulate them. Key takeaways:
 - Working copy = commit (no staging)
 - Plan with empty commits
 - Discovery order is not the same as logical order
-- Rebase to reorganize your stack
 - Mega merge to test features together
 - Absorb to route fixes automatically
 - `jj undo` is your safety net

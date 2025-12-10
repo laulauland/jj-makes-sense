@@ -575,28 +575,27 @@ jj git push
 
 ## Part 8: Mega Merge and Absorb
 
-So far we've worked on one feature stack. But what if you're an ambitious developer who keeps building?
+So far we've worked on one feature stack. What if you want to develop a second feature in parallel and test them together?
 
-### Stacking more work
+### A second feature branch
 
-You decide to add task priorities. Since you're already on top of due-dates, you just keep going:
+Let's add a `clear` command that removes completed tasks. Create it directly off main (parallel to due-dates):
 
 ```bash
-jj new -m "feat: add priority field to Task type"
+jj new main -m "feat: add clear command to remove completed tasks"
 ```
 
-Load the priority feature:
+Load the clear feature:
 
 ```bash
-cp _steps/06-priority-feature/task.ts src/task.ts
-cp _steps/06-priority-feature/add.ts src/commands/add.ts
-cp _steps/06-priority-feature/list.ts src/commands/list.ts
+cp _steps/06-clear-feature/clear.ts src/commands/clear.ts
+cp _steps/06-clear-feature/index.ts src/index.ts
 ```
 
 Create a bookmark:
 
 ```bash
-jj bookmark create feat/priority -r @
+jj bookmark create feat/clear -r @
 ```
 
 Check the graph:
@@ -605,37 +604,16 @@ Check the graph:
 jj log
 ```
 
-Priority is stacked on top of due-dates:
-
-```
-@  feat/priority   feat: add priority field to Task type
-◉  feat/due-dates  feat: display due dates in 'todo list'
-◉                  feat: add --due flag to 'todo add' command
-◉                  feat: add dueDate field to Task type
-◉  main
-```
-
-### Realizing they should be independent
-
-These features don't actually depend on each other. You want to ship them as separate PRs. In Git, you'd have to carefully rebase and cherry-pick. In jj, just rebase the priority commit onto main:
-
-```bash
-jj rebase -r feat/priority -d main
-jj log
-```
-
-Now they're siblings, both branching from main:
+Two independent branches, both off main:
 
 ```
 ◉  feat/due-dates  feat: display due dates in 'todo list'
 ◉                  feat: add --due flag to 'todo add' command
 ◉                  feat: add dueDate field to Task type
-│ @  feat/priority  feat: add priority field to Task type
+│ @  feat/clear  feat: add clear command to remove completed tasks
 ├─╯
 ◉  main
 ```
-
-One command. The priority commit moved from the top of the due-dates stack to branch directly from main.
 
 ### Testing features together
 
@@ -649,7 +627,7 @@ You want to test both features combined before shipping. In Git, you'd have to:
 In jj, create a merge commit with multiple parents:
 
 ```bash
-jj new feat/due-dates feat/priority -m "mega: testing both features"
+jj new feat/due-dates feat/clear -m "mega: testing both features"
 ```
 
 Check the graph:
@@ -664,58 +642,49 @@ jj log
 ◉ │  feat/due-dates  feat: display due dates in 'todo list'
 ◉ │                  feat: add --due flag to 'todo add' command
 ◉ │                  feat: add dueDate field to Task type
-│ ◉  feat/priority  feat: add priority field to Task type
+│ ◉  feat/clear  feat: add clear command to remove completed tasks
 ├─╯
-◉  fix/done-task-id
 ◉  main
+```
+
+### Resolving the merge
+
+Both branches modified `index.ts` (to add their command). Load the merged version:
+
+```bash
+cp _steps/07-mega-merge/index.ts src/index.ts
 ```
 
 Your working copy now has **both features combined**. Test them together:
 
 ```bash
 rm -f data/todos.json
-bun run todo add "Important task" --due 2025-01-20 --priority high
+bun run todo add "Task one" --due 2025-01-20
+bun run todo add "Task two"
+bun run todo done 1
+bun run todo list
+bun run todo clear
 bun run todo list
 ```
 
-You should see both the due date and priority displayed.
-
-### Resolving the merge
-
-The mega merge might have conflicts in files that both branches modified (like `task.ts`, `add.ts`, `list.ts`). If so, load the merged versions:
-
-```bash
-cp _steps/07-mega-merge/task.ts src/task.ts
-cp _steps/07-mega-merge/add.ts src/commands/add.ts
-cp _steps/07-mega-merge/list.ts src/commands/list.ts
-```
-
-Verify everything works:
-
-```bash
-bun run todo list
-```
+You should see due dates displayed, and `clear` removes the completed task.
 
 ### Code review feedback
 
 Now imagine reviewers give feedback on both branches:
 
 **Due dates feedback:**
-- "Improve the dueDate comment in task.ts"
-- "Better error message for invalid date format in add.ts"
-- "Change due date display format in list.ts"
+- "Change due date display format from `[due: ...]` to `(due ...)`"
 
-**Priority feedback:**
-- "Improve the priority comment in task.ts"
-- "Better error message for invalid priority in add.ts"
-- "Change priority display format in list.ts"
+**Clear feedback:**
+- "Better error message when no tasks to clear"
+- "Show remaining task count after clearing"
 
 Instead of editing each commit individually, make all fixes at once:
 
 ```bash
-cp _steps/08-absorb-fixes/task.ts src/task.ts
-cp _steps/08-absorb-fixes/add.ts src/commands/add.ts
 cp _steps/08-absorb-fixes/list.ts src/commands/list.ts
+cp _steps/08-absorb-fixes/clear.ts src/commands/clear.ts
 jj diff
 ```
 
@@ -734,7 +703,7 @@ Check the result:
 ```bash
 jj log
 jj diff -r feat/due-dates
-jj diff -r feat/priority
+jj diff -r feat/clear
 ```
 
 Each commit now includes its review fixes. The changes were routed to the right places automatically.

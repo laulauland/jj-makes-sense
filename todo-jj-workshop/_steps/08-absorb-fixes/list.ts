@@ -15,8 +15,7 @@ export async function list(): Promise<void> {
   for (const task of tasks) {
     const status = task.done ? "✓" : " ";
     const due = task.dueDate ? ` (due ${task.dueDate})` : "";
-    const priority = task.priority ? ` !${task.priority}` : "";
-    console.log(`  [${status}] #${task.id} - ${task.text}${due}${priority}`);
+    console.log(`  [${status}] #${task.id} - ${task.text}${due}`);
   }
 
   console.log("");
