@@ -411,9 +411,9 @@ layout: center
 class: text-center
 ---
 
-# Part 4: Splitting Commits
+# Part 4: Splitting and Squashing
 
-Breaking commits apart
+Breaking commits apart, folding them together
 
 ---
 
@@ -470,6 +470,49 @@ Opens an interactive editor to select which changes go where.
 <v-click>
 
 Descendants automatically rebase on top of the split commits.
+
+</v-click>
+
+---
+
+# Squashing: The Inverse
+
+<div class="grid grid-cols-2 gap-8">
+
+<div>
+
+### Fold into parent
+
+```bash
+jj squash
+```
+
+Current commit merges into parent.
+
+</div>
+
+<div v-click>
+
+### Fold into specific ancestor
+
+```bash
+jj squash --into <change-id>
+```
+
+Routes changes to any ancestor.
+
+</div>
+
+</div>
+
+<v-click>
+
+### Clean up empty commits
+
+```bash
+jj squash     # fold empty into parent
+jj abandon    # discard entirely
+```
 
 </v-click>
 

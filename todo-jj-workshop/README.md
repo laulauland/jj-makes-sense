@@ -356,7 +356,11 @@ Try it: undo the rebase, look at the graph, then redo it.
 
 ---
 
-## Part 5: Splitting a Commit
+## Part 5: Splitting and Squashing
+
+Split when a commit does too much. Squash when commits are too granular.
+
+### Splitting a commit
 
 Let's say a reviewer asks: "Can you split the --due flag commit? Separate the arg parsing from the validation logic."
 
@@ -404,6 +408,49 @@ Your stack now has more commits. Descendants were automatically rebased on top o
 8. Hope you didn't mess up
 
 **In jj:** one command, interactive selection, done.
+
+### Squashing commits
+
+Squash is the inverse of split. It folds changes into a parent commit.
+
+**Scenario 1: Fold current commit into parent**
+
+You made a small fix that belongs with the previous commit:
+
+```bash
+jj squash
+```
+
+Your current commit's changes merge into the parent. The current commit disappears.
+
+**Scenario 2: Fold into a specific ancestor**
+
+You're at the tip of your stack and realize some changes belong in an earlier commit:
+
+```bash
+jj squash --into <target-change-id>
+```
+
+This routes your working copy changes to the specified commit, skipping intermediate ancestors.
+
+**Scenario 3: Clean up empty commits**
+
+jj creates a new empty commit after most operations. If you accumulate empties:
+
+```bash
+jj squash              # if current is empty, just removes it
+jj abandon             # discard current commit entirely
+```
+
+### When to use which
+
+| Situation | Command |
+|-----------|---------|
+| Commit does too much | `jj split` |
+| Small fix belongs with parent | `jj squash` |
+| Changes belong in specific ancestor | `jj squash --into <change>` |
+| Discard empty/unwanted commit | `jj abandon` |
+| Undo accidental `jj new` | `jj squash` or `jj abandon` |
 
 ---
 
