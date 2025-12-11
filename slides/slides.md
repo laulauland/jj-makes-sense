@@ -668,6 +668,53 @@ jj rebase -s <feat1> -d main  # Rebase features onto updated main
 </v-click>
 
 ---
+
+# Keeping Current: Rebase vs Merge
+
+<div class="grid grid-cols-2 gap-8">
+
+<div>
+
+### Rebase
+
+```bash
+jj git fetch
+jj rebase -d main
+```
+
+Linear history, new commit IDs
+
+</div>
+
+<div>
+
+### Merge
+
+```bash
+jj git fetch
+jj new @ main -m "merge main"
+```
+
+Preserves original commit IDs
+
+</div>
+
+</div>
+
+<v-click>
+
+### The tradeoff
+
+| | Rebase | Merge |
+|---|---|---|
+| PR comments | **Orphaned** | Preserved |
+| History | Clean | True timeline |
+
+**jj makes rebasing easy, but that doesn't mean always rebase.** PR comments get orphaned when commit IDs change.
+
+</v-click>
+
+---
 layout: center
 class: text-center
 ---

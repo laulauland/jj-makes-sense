@@ -618,6 +618,51 @@ jj bookmark set feat/due-dates -r @
 jj git push
 ```
 
+### Keeping your branch current with main
+
+Main moved while you were working. How do you update your branch?
+
+**Option 1: Rebase (rewrite history)**
+
+```bash
+jj git fetch
+jj rebase -d main
+```
+
+Your commits get new commit IDs. The history looks like you started from the latest main.
+
+**Option 2: Merge (preserve history)**
+
+```bash
+jj git fetch
+jj new @  main -m "merge main into feature"
+```
+
+Creates a merge commit. Your original commits keep their IDs.
+
+### Rebase vs merge tradeoffs
+
+| | Rebase | Merge |
+|---|---|---|
+| History | Linear, clean | Shows true timeline |
+| Commit IDs | Change (new hashes) | Preserved |
+| PR comments | **Orphaned** (GitHub loses track) | Preserved |
+| Conflicts | Resolved per-commit | Resolved once |
+
+**The PR comments problem**: When you rebase and force-push, GitHub sees entirely new commits. Review comments attached to the old commits become orphaned - they're still there but disconnected from the current code.
+
+**When to rebase:**
+- Before opening a PR (clean up your work)
+- Small PRs with no comments yet
+- When reviewer explicitly asks for rebase
+
+**When to merge:**
+- PR has active review comments you want to preserve
+- Long-running branch with ongoing discussion
+- When you want to show "I incorporated feedback on date X"
+
+**jj makes rebasing easy, but that doesn't mean you should always do it.** The Git merge-vs-rebase debate exists for good reasons. jj just removes the "rebasing is scary" argument from the equation.
+
 ---
 
 ## Part 8: Mega Merge and Absorb
